@@ -76,7 +76,6 @@ linters:
     - gocritic
     - gocyclo
     - godot
-    - goerr113
     - gofmt
     - goimports
     - golint
@@ -115,7 +114,6 @@ issues:
         - gosec
         - scopelint
         - wsl
-        - goerr113
         - gocritic
       path: _test\.go
 

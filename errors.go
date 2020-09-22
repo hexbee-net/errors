@@ -1,9 +1,14 @@
 package errors
 
 import (
+	"errors"
 	"fmt"
 	"io"
 )
+
+type causer interface {
+	Cause() error
+}
 
 // fundamental is an error that has a message and a stack, but no caller.
 type fundamental struct {
@@ -88,53 +93,39 @@ func Wrapf(err error, format string, args ...interface{}) error {
 	}
 }
 
-// WithFields annotates err with the specified field.
-// If err is nil, WithFields returns nil.
-func WithField(err error, key string, value interface{}) error {
-	if err == nil {
-		return nil
+// Unpack returns a slice of all the underlying errors, if possible.
+// An error value has a cause if it implements the following
+// interface:
+//
+//     type causer interface {
+//            Cause() error
+//     }
+//
+// If the error is nil, an empty slice will be returned.
+func Unpack(err error) []error {
+	stack := make([]error, 0)
+
+	for err != nil {
+		switch v := err.(type) {
+		case *withStack:
+		case *withFields:
+		case *withMessage:
+			stack = append(stack, errors.New(v.msg))
+		default:
+			stack = append(stack, err)
+		}
+
+		if cause, ok := err.(causer); ok {
+			err = cause.Cause()
+		} else {
+			break
+		}
 	}
 
-	err = &withFields{
-		err,
-		map[string]interface{}{key: value},
-	}
-
-	return &withStack{
-		err,
-		callers(),
-	}
-}
-
-// WithFields annotates err with fields.
-// If err is nil, WithFields returns nil.
-func WithFields(err error, fields map[string]interface{}) error {
-	if err == nil {
-		return nil
-	}
-
-	f := make(map[string]interface{}, len(fields))
-
-	for k, v := range fields {
-		f[k] = v
-	}
-
-	err = &withFields{
-		err,
-		f,
-	}
-
-	return &withStack{
-		err,
-		callers(),
-	}
+	return stack
 }
 
 func Fields(err error) map[string]interface{} {
-	type causer interface {
-		Cause() error
-	}
-
 	type fielder interface {
 		Fields() map[string]interface{}
 	}
@@ -171,10 +162,6 @@ func Fields(err error) map[string]interface{} {
 // be returned. If the error is nil, nil will be returned without further
 // investigation.
 func Cause(err error) error {
-	type causer interface {
-		Cause() error
-	}
-
 	for err != nil {
 		cause, ok := err.(causer)
 		if !ok {
@@ -185,43 +172,6 @@ func Cause(err error) error {
 	}
 
 	return err
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-
-type withFields struct {
-	error
-	fields map[string]interface{}
-}
-
-func (w *withFields) Cause() error {
-	return w.error
-}
-
-func (w *withFields) Unwrap() error {
-	return w.error
-}
-
-func (w *withFields) Fields() map[string]interface{} {
-	return w.fields
-}
-
-func (w *withFields) Format(s fmt.State, verb rune) {
-	switch verb {
-	case 'v':
-		if s.Flag('+') {
-			_, _ = fmt.Fprintf(s, "%+v\n", w.Cause())
-			for k, v := range w.fields {
-				_, _ = fmt.Fprintf(s, "  %s: %v\n", k, v)
-			}
-
-			return
-		}
-
-		fallthrough
-	case 's', 'q':
-		_, _ = io.WriteString(s, w.Error())
-	}
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -334,3 +284,74 @@ func (w *withMessage) Format(s fmt.State, verb rune) {
 }
 
 // /////////////////////////////////////////////////////////////////////////////
+
+type withFields struct {
+	cause  error
+	fields map[string]interface{}
+}
+
+// WithFields annotates err with the specified field.
+// If err is nil, WithFields returns nil.
+func WithField(err error, key string, value interface{}) error {
+	if err == nil {
+		return nil
+	}
+
+	return &withFields{
+		err,
+		map[string]interface{}{key: value},
+	}
+}
+
+// WithFields annotates err with fields.
+// If err is nil, WithFields returns nil.
+func WithFields(err error, fields map[string]interface{}) error {
+	if err == nil {
+		return nil
+	}
+
+	f := make(map[string]interface{}, len(fields))
+
+	for k, v := range fields {
+		f[k] = v
+	}
+
+	return &withFields{
+		err,
+		f,
+	}
+}
+
+func (w *withFields) Error() string {
+	return w.cause.Error()
+}
+
+func (w *withFields) Cause() error {
+	return w.cause
+}
+
+func (w *withFields) Unwrap() error {
+	return w.cause
+}
+
+func (w *withFields) Fields() map[string]interface{} {
+	return w.fields
+}
+
+func (w *withFields) Format(s fmt.State, verb rune) {
+	switch verb {
+	case 'v':
+		if s.Flag('+') {
+			_, _ = fmt.Fprintf(s, "%+v\n", w.Cause())
+			for k, v := range w.fields {
+				_, _ = fmt.Fprintf(s, "  %s: %v\n", k, v)
+			}
+
+			return
+		}
+
+		fallthrough
+	case 's', 'q':
+		_, _ = io.WriteString(s, w.Error())
+	}
+}

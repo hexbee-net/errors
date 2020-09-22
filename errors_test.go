@@ -128,6 +128,43 @@ func TestWrapf(t *testing.T) {
 	}
 }
 
+func TestUnstack(t *testing.T) {
+	tests := []struct {
+		err  error
+		want []error
+	}{
+		{
+			err:  nil,
+			want: []error{},
+		},
+		{
+			err: Wrap(io.EOF, "read error"),
+			want: []error{
+				errors.New("read error"),
+				io.EOF,
+			},
+		},
+		{
+			err: WithField(Wrap(io.EOF, "read error"), "key", "value"),
+			want: []error{
+				errors.New("read error"),
+				io.EOF,
+			},
+		},
+		{
+			err: io.EOF,
+			want: []error{
+				io.EOF,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		got := Unpack(tt.err)
+		assert.ElementsMatch(t, tt.want, got)
+	}
+}
+
 func TestErrorf(t *testing.T) {
 	tests := []struct {
 		err  error
