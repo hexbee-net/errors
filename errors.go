@@ -8,8 +8,10 @@ import (
 	"github.com/apex/log"
 )
 
+// Fields is used to manipulate error fields.
 type Fields map[string]interface{}
 
+// Fields is used for compatibility with Apex Log WithFields method.
 func (f Fields) Fields() log.Fields {
 	return log.Fields(f)
 }
@@ -133,6 +135,8 @@ func Unpack(err error) []error {
 	return stack
 }
 
+// GetFields retrieve all the fields associated with an error stack.
+// If the error is nil, an empty slice will be returned.
 func GetFields(err error) Fields {
 	type fielder interface {
 		Fields() Fields
@@ -298,7 +302,7 @@ type withFields struct {
 	fields Fields
 }
 
-// WithFields annotates err with the specified field.
+// WithField annotates err with the specified field.
 // If err is nil, WithFields returns nil.
 func WithField(err error, key string, value interface{}) error {
 	if err == nil {
