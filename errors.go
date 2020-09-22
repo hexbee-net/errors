@@ -4,7 +4,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
+	"github.com/apex/log"
 )
+
+type Fields map[string]interface{}
+
+func (f Fields) Fields() log.Fields {
+	return log.Fields(f)
+}
 
 type causer interface {
 	Cause() error
@@ -125,12 +133,12 @@ func Unpack(err error) []error {
 	return stack
 }
 
-func Fields(err error) map[string]interface{} {
+func GetFields(err error) Fields {
 	type fielder interface {
-		Fields() map[string]interface{}
+		Fields() Fields
 	}
 
-	fields := make(map[string]interface{})
+	fields := make(Fields)
 
 	for err != nil {
 		if f, ok := err.(fielder); ok {
@@ -287,7 +295,7 @@ func (w *withMessage) Format(s fmt.State, verb rune) {
 
 type withFields struct {
 	cause  error
-	fields map[string]interface{}
+	fields Fields
 }
 
 // WithFields annotates err with the specified field.
@@ -299,18 +307,18 @@ func WithField(err error, key string, value interface{}) error {
 
 	return &withFields{
 		err,
-		map[string]interface{}{key: value},
+		Fields{key: value},
 	}
 }
 
 // WithFields annotates err with fields.
 // If err is nil, WithFields returns nil.
-func WithFields(err error, fields map[string]interface{}) error {
+func WithFields(err error, fields Fields) error {
 	if err == nil {
 		return nil
 	}
 
-	f := make(map[string]interface{}, len(fields))
+	f := make(Fields, len(fields))
 
 	for k, v := range fields {
 		f[k] = v
@@ -334,7 +342,7 @@ func (w *withFields) Unwrap() error {
 	return w.cause
 }
 
-func (w *withFields) Fields() map[string]interface{} {
+func (w *withFields) Fields() Fields {
 	return w.fields
 }
 

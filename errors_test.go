@@ -205,49 +205,49 @@ func TestWithField(t *testing.T) {
 		err   error
 		key   string
 		value interface{}
-		want  map[string]interface{}
+		want  Fields
 	}{
 		{
 			err:   io.EOF,
 			key:   "key",
 			value: "value",
-			want:  map[string]interface{}{"key": "value"},
+			want:  Fields{"key": "value"},
 		},
 		{
 			err:   WithField(io.EOF, "key1", "value1"),
 			key:   "key2",
 			value: "value2",
-			want:  map[string]interface{}{"key1": "value1", "key2": "value2"},
+			want:  Fields{"key1": "value1", "key2": "value2"},
 		},
 	}
 
 	for _, tt := range tests {
 		got := WithField(tt.err, tt.key, tt.value)
-		assert.Equal(t, tt.want, Fields(got))
+		assert.Equal(t, tt.want, GetFields(got))
 	}
 }
 
 func TestWithFields(t *testing.T) {
 	tests := []struct {
 		err    error
-		fields map[string]interface{}
-		want   map[string]interface{}
+		fields Fields
+		want   Fields
 	}{
 		{
 			err:    io.EOF,
-			fields: map[string]interface{}{"key": "value"},
-			want:   map[string]interface{}{"key": "value"},
+			fields: Fields{"key": "value"},
+			want:   Fields{"key": "value"},
 		},
 		{
 			err:    WithField(io.EOF, "key1", "value1"),
-			fields: map[string]interface{}{"key2": "value2"},
-			want:   map[string]interface{}{"key1": "value1", "key2": "value2"},
+			fields: Fields{"key2": "value2"},
+			want:   Fields{"key1": "value1", "key2": "value2"},
 		},
 	}
 
 	for _, tt := range tests {
 		got := WithFields(tt.err, tt.fields)
-		assert.Equal(t, tt.want, Fields(got))
+		assert.Equal(t, tt.want, GetFields(got))
 	}
 }
 

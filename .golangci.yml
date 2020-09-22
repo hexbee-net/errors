@@ -9,8 +9,6 @@ linters-settings:
   funlen:
     lines: 100
     statements: 50
-  gci:
-    local-prefixes: github.com/golangci/golangci-lint
   goconst:
     min-len: 2
     min-occurrences: 2
@@ -68,7 +66,6 @@ linters:
     - exhaustive
     - exportloopref
     - funlen
-    - gci
     - gochecknoglobals
     - gochecknoinits
     - gocognit
