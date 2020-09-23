@@ -132,6 +132,12 @@ func Unpack(err error) []error {
 		}
 	}
 
+	// reverse the slice so that the first item is the top of the stack.
+	for i := len(stack)/2 - 1; i >= 0; i-- {
+		opp := len(stack) - 1 - i
+		stack[i], stack[opp] = stack[opp], stack[i]
+	}
+
 	return stack
 }
 
