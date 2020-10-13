@@ -8,6 +8,11 @@ import (
 	"github.com/apex/log"
 )
 
+//Error is used to be able to declare const errors
+type Error string
+
+func (e Error) Error() string { return string(e) }
+
 // Fields is used to manipulate error fields.
 type Fields map[string]interface{}
 
